@@ -1,0 +1,19 @@
+{
+  "telegramToken": "123456789:AAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "allowedUserIds": [123456789],
+  "claudeConfigDir": "~/.claude-work",
+  "claudeBin": "/opt/homebrew/bin/claude",
+  "tmuxSession": "claude-relay",
+  "hookPort": 48761,
+  "repos": {
+    "athena-ios": "~/Documents/work/cermati/athena-ios"
+  },
+  "permissionTimeoutSec": 600,
+  "outputPollMs": 700,
+  "inboxMaxBytes": 20000000,
+  "autoAllow": {
+    "enabled": false,
+    "ttlSec": 3600,
+    "excludedTools": ["Bash", "Write", "Edit", "MultiEdit", "NotebookEdit"]
+  }
+}
