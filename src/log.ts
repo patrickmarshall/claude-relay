@@ -5,7 +5,7 @@ import { LOG_DIR, RELAY_LOG } from './paths.js';
 mkdirSync(LOG_DIR, { recursive: true });
 
 const streams: Array<{ stream: DestinationStream }> = [
-  { stream: destination({ dest: RELAY_LOG, sync: false, mkdir: true }) },
+  { stream: destination({ dest: RELAY_LOG, sync: true, mkdir: true }) },
 ];
 if (process.stdout.isTTY || process.env.LOG_STDOUT) {
   streams.push({ stream: process.stdout });

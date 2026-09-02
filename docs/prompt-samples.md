@@ -87,7 +87,15 @@ _PENDING: capture after `/login` in the work config. Record exact box text, opti
 and whether `1` confirms immediately or needs Enter. `answerPrompt()` in `src/permissions.ts` currently sends `1`,
 then `Enter` only if the dialog is still visible; deny sends `Escape`._
 
-## Multi-line paste
+## Multi-line paste (verified)
 
-_PENDING: verify `tmux load-buffer` + `paste-buffer -p` (bracketed paste) inserts a multi-line block in the TUI
-without submitting._
+`printf "line one\nline two\nline three" | tmux load-buffer -b rt -; tmux paste-buffer -p -d -b rt -t <win>` inserts:
+
+```
+❯ line one
+  line two
+  line three
+```
+
+without submitting; a following `Enter` submits the whole block. `send-keys -l` with a newline would submit at
+the newline, so the relay pastes any multi-line message and sends `Enter` once. `C-u` clears one line of the input.

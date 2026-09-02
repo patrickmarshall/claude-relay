@@ -167,7 +167,11 @@ async function main(): Promise<void> {
   const hookServer = await startHookServer(cfg.hookPort, log, onHook);
   watcher.start();
 
-  await bot.launch({ dropPendingUpdates: true }, () => log.info('telegram bot launched'));
+  // Telegraf's launch() promise only settles when polling stops; don't await it.
+  bot.launch({ dropPendingUpdates: true }, () => log.info('telegram bot launched')).catch((e) => {
+    log.fatal({ err: e }, 'telegram polling died');
+    process.exit(1);
+  });
   log.info({ reattached, dropped }, 'relay up');
   await notifier.broadcast(`🟢 relay up — ${reattached.length} session(s) reattached${dropped.length ? `, dropped: ${escapeHtml(dropped.join(', '))}` : ''}`);
 
