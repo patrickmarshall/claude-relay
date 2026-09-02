@@ -16,10 +16,11 @@ import { Watcher } from './watcher.js';
 const HOOK_EVENTS = ['SessionStart', 'UserPromptSubmit', 'PreToolUse', 'PermissionRequest', 'Notification', 'PostToolUse', 'PostToolUseFailure', 'Stop', 'SessionEnd'];
 
 /**
- * Pane-based permission detection is a fallback for when the PermissionRequest hook did not fire.
- * It depends on the exact TUI rendering; keep it off until docs/prompt-samples.md confirms the regexes.
+ * Pane-based dialog detection: creates a pending prompt if the hook never fired, and resolves a pending
+ * prompt when the dialog disappears (a terminal-side Escape fires no hook at all). Verified against
+ * docs/prompt-samples.md; set CLAUDE_RELAY_PANE_DIALOGS=0 to disable.
  */
-const PANE_DIALOG_DETECTION = process.env.CLAUDE_RELAY_PANE_DIALOGS === '1';
+const PANE_DIALOG_DETECTION = process.env.CLAUDE_RELAY_PANE_DIALOGS !== '0';
 const PANE_FALLBACK_DELAY_MS = 1000;
 
 function writeHooksSettings(): void {
@@ -51,6 +52,8 @@ async function main(): Promise<void> {
 
   let perms!: PermissionManager;
   const dialogSeenAt = new Map<string, number>();
+  /** PermissionRequest carries no tool_use_id; the preceding PreToolUse does. */
+  const lastToolUse = new Map<string, { id: string; tool: string }>();
 
   const watcher = new Watcher(cfg, sessions, log, {
     async onOutput(session, text) {
@@ -63,6 +66,11 @@ async function main(): Promise<void> {
         await tmux.sendKeys(sessions.target(session.name), 'Enter');
         await notifier.broadcast(`<b>[${escapeHtml(session.name)}]</b> accepted the folder trust prompt for <code>${escapeHtml(session.cwd)}</code>`);
         return;
+      }
+      // Keep the state machine honest when no hook fires (e.g. after a terminal-side Escape).
+      if (!session.pending) {
+        if (a.idle && session.state === 'working') sessions.setState(session.name, 'idle');
+        else if (a.working && session.state === 'idle') sessions.setState(session.name, 'working');
       }
       if (!PANE_DIALOG_DETECTION) return;
       const now = Date.now();
@@ -126,20 +134,22 @@ async function main(): Promise<void> {
         sessions.setState(session.name, 'working');
         break;
       case 'PreToolUse':
+        if (p.tool_use_id) lastToolUse.set(session.name, { id: p.tool_use_id, tool: p.tool_name ?? '' });
         if (session.pending && session.pending.toolUseId && session.pending.toolUseId !== p.tool_use_id) {
           await perms.resolveExternally(session, 'terminal');
         }
         if (session.state !== 'waiting_permission') sessions.setState(session.name, 'working');
         break;
       case 'PermissionRequest':
-        await perms.onRequest(session, p.tool_name ?? 'Unknown', p.tool_input, p.tool_use_id, 'hook');
+        await perms.onRequest(session, p.tool_name ?? 'Unknown', p.tool_input, p.tool_use_id ?? lastToolUse.get(session.name)?.id, 'hook');
         break;
       case 'Notification':
         if (p.notification_type === 'permission_prompt') {
           if (!session.pending) {
             // PermissionRequest did not reach us; use what the notification carries.
-            const tool = (p.message ?? '').match(/permission to use (\S+)/)?.[1] ?? 'Unknown';
-            await perms.onRequest(session, tool, { message: p.message }, undefined, 'hook');
+            const last = lastToolUse.get(session.name);
+            const tool = (p.message ?? '').match(/permission to use (\S+)/)?.[1] ?? (last?.tool || 'Unknown');
+            await perms.onRequest(session, tool, { message: p.message }, last?.id, 'hook');
           }
         } else if (p.notification_type === 'idle_prompt') {
           if (!session.pending) sessions.setState(session.name, 'idle');

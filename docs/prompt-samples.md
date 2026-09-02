@@ -81,11 +81,62 @@ spinner as `✻ Brewed for 0s`.
 ✻ Brewed for 0s
 ```
 
-## Permission dialog
+## Permission dialog (verified, Bash)
 
-_PENDING: capture after `/login` in the work config. Record exact box text, option labels, which keys answer it,
-and whether `1` confirms immediately or needs Enter. `answerPrompt()` in `src/permissions.ts` currently sends `1`,
-then `Enter` only if the dialog is still visible; deny sends `Escape`._
+Prompt: "Yes, run: touch hello.txt". The dialog is **not boxed**; it replaces the input box below a single separator:
+
+```
+❯ Yes, run: touch hello.txt
+
+  Running 1 shell command…
+  ⎿  $ touch hello.txt
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ Bash command
+
+   touch hello.txt
+   Create empty hello.txt file
+
+ Do you want to proceed?
+ ❯ 1. Yes
+   2. Yes, and always allow access to repo/ from this project
+   3. No
+
+ Esc to cancel · Tab to amend · ctrl+e to explain
+```
+
+Keys (verified):
+
+| action | keys | result |
+|---|---|---|
+| allow | `1` | confirms immediately, no Enter needed; tool runs, `PostToolUse` then `Stop` fire |
+| deny | `Escape` | dialog closes, tool not run, Claude goes idle. **No hook fires at all** (no Stop, no PostToolUseFailure), so a terminal-side Escape is only detectable from the pane. |
+
+Hook sequence for one permission-gated tool call:
+
+```
+UserPromptSubmit
+PreToolUse          tool_name=Bash tool_use_id=toolu_01C9…   ← the only event carrying tool_use_id
+PermissionRequest   tool_name=Bash tool_input={command, description} permission_suggestions=[…]  (no tool_use_id)
+Notification        notification_type=permission_prompt message="Claude needs your permission"   (a few seconds later)
+[answer]
+PostToolUse         tool_use_id=toolu_01C9…                    (allow only)
+Stop
+Notification        notification_type=idle_prompt message="Claude is waiting for your input"
+```
+
+Full `PermissionRequest` payload:
+
+```json
+{"session_id":"bbbdbeaf-…","cwd":"…/scratchpad/repo","prompt_id":"6c0f1aad-…","permission_mode":"default","effort":{"level":"high"},"hook_event_name":"PermissionRequest","tool_name":"Bash","tool_input":{"command":"touch hello.txt","description":"Create empty hello.txt file"},"permission_suggestions":[{"type":"addDirectories","directories":["…/scratchpad/repo"],"destination":"session"},{"type":"setMode","mode":"acceptEdits","destination":"session"}]}
+```
+
+## Working / idle indicators
+
+- Status line while running: `⏸ manual mode on · esc to interrupt · ← for agents`; when idle: `… · ? for shortcuts · …`.
+- Spinners: `✳ Generating…`, `✽ Fiddle-faddling… (4s · ↓ 19 tokens)`, `Running 1 shell command · 20s…`; finished-turn line `✻ Brewed/Cogitated/Baked for Ns`.
+- Transient tip lines: `  ⎿  Tip: …`. Right-aligned `● high · /effort` above the input box.
+- When idle the input box may show a greyed suggested reply (`❯ yes, create hello.txt`), so an empty `❯` must not be required for idle.
 
 ## Multi-line paste (verified)
 

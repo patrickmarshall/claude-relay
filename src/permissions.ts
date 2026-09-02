@@ -132,8 +132,9 @@ export class PermissionManager {
 
   /**
    * THE single place that knows how the Claude Code TUI accepts an answer.
-   * Allow: press "1" (selects "Yes"); if the dialog is still on screen, confirm with Enter.
-   * Deny: Escape cancels the request (Claude stops and waits for instructions).
+   * Allow: pressing "1" selects "Yes" and confirms immediately (verified). The Enter fallback only fires if the
+   * dialog is somehow still on screen 250 ms later.
+   * Deny: Escape cancels the request ("Esc to cancel" in the dialog hint); Claude stops and waits for instructions.
    * Verified against Claude Code 2.1.216 — see docs/prompt-samples.md.
    */
   async answerPrompt(session: Session, choice: Decision): Promise<void> {
