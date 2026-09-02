@@ -1,6 +1,6 @@
 import type { Config } from './config.js';
 import type { Logger } from './log.js';
-import { analyzePane, cleanTranscript, type PaneAnalysis } from './pane.js';
+import { analyzePane, cleanTranscript, NOISE_RES, type PaneAnalysis } from './pane.js';
 import type { Session, SessionManager } from './sessions.js';
 import { tmux } from './tmux.js';
 
@@ -9,6 +9,7 @@ const SIZE_FLUSH_CHARS = 1500;
 const QUIET_FLUSH_MS = 2000;
 const ECHO_WINDOW_MS = 15_000;
 const RESYNC_TAIL = 30;
+const ANCHOR_LOOKBACK = 60;
 
 interface WindowState {
   flushed: string[];
@@ -26,25 +27,25 @@ export interface WatcherHandlers {
 }
 
 /**
- * Finds transcript lines in `doc` that come after the last flushed content by
- * locating the tail of `flushed` inside `doc`. Returns null when no anchor matches.
+ * Finds transcript lines in `doc` that come after what was already flushed.
+ * Walks back through the flushed lines (skipping blanks, short lines and UI noise, which the TUI
+ * rewrites freely) until one is found in `doc`; lines after it that are unchanged are skipped,
+ * rewritten ones (e.g. "Running 1 shell command…" → "Ran 1 shell command") are sent again.
+ * Returns null when no anchor matches at all.
  */
 export function newLinesSince(flushed: string[], doc: string[]): string[] | null {
-  let end = flushed.length;
-  while (end > 0 && (flushed[end - 1] ?? '').trim() === '') end--;
-  if (end === 0) return doc;
-  for (const k of [6, 3, 1]) {
-    const start = Math.max(0, end - k);
-    const anchor = flushed.slice(start, end);
-    if (anchor.length < k && k !== 1) continue;
-    if (k === 1 && (anchor[0] ?? '').trim().length < 8) continue;
-    for (let i = doc.length - anchor.length; i >= 0; i--) {
-      let ok = true;
-      for (let j = 0; j < anchor.length; j++) {
-        if (doc[i + j] !== anchor[j]) { ok = false; break; }
-      }
-      if (ok) return doc.slice(i + anchor.length);
-    }
+  if (flushed.length === 0) return doc;
+  const stable = (l: string) => l.trim().length >= 8 && !NOISE_RES.some((re) => re.test(l));
+  for (let j = flushed.length - 1; j >= Math.max(0, flushed.length - ANCHOR_LOOKBACK); j--) {
+    const line = flushed[j] ?? '';
+    if (!stable(line)) continue;
+    const i = doc.lastIndexOf(line);
+    if (i < 0) continue;
+    const after = doc.slice(i + 1);
+    const already = flushed.slice(j + 1);
+    let k = 0;
+    while (k < already.length && k < after.length && already[k] === after[k]) k++;
+    return after.slice(k);
   }
   return null;
 }

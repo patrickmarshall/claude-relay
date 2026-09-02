@@ -58,14 +58,21 @@ describe('cleanTranscript', () => {
 
 describe('newLinesSince', () => {
   it('returns lines after the anchor', () => {
-    const flushed = ['1', '2', '3', '4', '5', '6', '7', ''];
-    const doc = ['2', '3', '4', '5', '6', '7', '', '8', '9'];
-    expect(newLinesSince(flushed, doc)).toEqual(['', '8', '9']);
+    const flushed = ['line one', 'line two', 'line three', ''];
+    const doc = ['line two', 'line three', '', 'line four', 'line five'];
+    expect(newLinesSince(flushed, doc)).toEqual(['line four', 'line five']);
   });
-  it('falls back to shorter anchors', () => {
+  it('falls back to earlier anchors', () => {
     const flushed = ['a', 'b', 'c', 'd', 'e', 'f', 'a long enough line'];
     const doc = ['zzz', 'a long enough line', 'new'];
     expect(newLinesSince(flushed, doc)).toEqual(['new']);
+  });
+  it('survives rewritten transient lines and skips unchanged ones', () => {
+    const flushed = ['❯ Yes, run: touch hello.txt', '', '  Running 1 shell command · 20s…', '  ⎿  $ touch hello.txt'];
+    const doc = ['❯ Yes, run: touch hello.txt', '', '  Ran 1 shell command', '', '⏺ Done — created hello.txt.'];
+    expect(newLinesSince(flushed, doc)).toEqual(['  Ran 1 shell command', '', '⏺ Done — created hello.txt.']);
+    const doc2 = ['❯ Yes, run: touch hello.txt', '', '  Running 1 shell command · 20s…', '  ⎿  $ touch hello.txt', '', 'more'];
+    expect(newLinesSince(flushed, doc2)).toEqual(['', 'more']);
   });
   it('returns null when nothing matches', () => {
     expect(newLinesSince(['some long line here'], ['other'])).toBeNull();
