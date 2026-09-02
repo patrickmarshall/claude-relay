@@ -45,6 +45,14 @@ interface PersistedState {
 
 export const NAME_RE = /^[a-z0-9][a-z0-9_-]{0,40}$/;
 
+/** Appended to Claude's system prompt so replies read well on a phone (Telegram, ~40 chars/line, no alignment). */
+export const TELEGRAM_SYSTEM_PROMPT =
+  'The user is reading your replies on a phone through Telegram: the terminal output is relayed as plain wrapped ' +
+  'text, about 40 characters per line, with no monospace alignment. Format every reply for that. Use short ' +
+  'paragraphs and simple "-" bullet lists. Never use markdown tables, box-drawing characters, ASCII diagrams, ' +
+  'column alignment, or wide headings. Keep lines and code snippets short; prefer prose over layout. ' +
+  'Be concise: the user cannot scroll a long message comfortably.';
+
 export class SessionError extends Error {}
 
 export class SessionManager {
@@ -148,6 +156,7 @@ export class SessionManager {
       `CLAUDE_RELAY_PORT=${this.cfg.hookPort}`,
       shellQuote(this.cfg.claudeBin),
       '--settings', shellQuote(HOOKS_SETTINGS_PATH),
+      '--append-system-prompt', shellQuote(TELEGRAM_SYSTEM_PROMPT),
     ];
     if (resume?.id) parts.push('--resume', shellQuote(resume.id));
     else if (resume?.continue) parts.push('--continue');

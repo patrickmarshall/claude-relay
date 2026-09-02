@@ -144,12 +144,22 @@ export function analyzePane(rawLines: string[]): PaneAnalysis {
   return { content, dialog, trustPrompt, idle, working };
 }
 
-/** Transcript lines → text for Telegram: noise removed, blank runs collapsed. */
+const BOX_ONLY_RE = /^[\s─━│┃┼┬┴├┤┌┐└┘╭╮╰╯╪╫═╞╡╤╧┏┓┗┛]+$/;
+
+/** Table rows and other aligned lines don't survive proportional fonts; flatten them. */
+export function flattenLine(l: string): string {
+  if (!/[│┃]/.test(l)) return l;
+  return l.replace(/^[\s│┃]+|[\s│┃]+$/g, '').split(/\s*[│┃]\s*/).filter(Boolean).join(' | ');
+}
+
+/** Transcript lines → text for Telegram: noise and box drawing removed, table rows flattened, blank runs collapsed. */
 export function cleanTranscript(lines: string[]): string {
   const out: string[] = [];
   for (const raw of lines) {
-    const l = rtrim(raw);
+    let l = rtrim(raw);
     if (NOISE_RES.some((re) => re.test(l))) continue;
+    if (l !== '' && BOX_ONLY_RE.test(l)) continue;
+    l = flattenLine(l);
     if (l === '' && (out.length === 0 || out[out.length - 1] === '')) continue;
     out.push(l);
   }

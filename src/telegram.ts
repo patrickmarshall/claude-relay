@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { Markup, Telegraf, type Context } from 'telegraf';
 import { message, callbackQuery } from 'telegraf/filters';
 import type { Config } from './config.js';
-import { escapeHtml, fmtAge, formatOutput, shortId } from './format.js';
+import { escapeHtml, fmtAge, formatPre, shortId } from './format.js';
 import { Inbox, InboxError } from './inbox.js';
 import type { Logger } from './log.js';
 import { PermissionError, PermissionManager, type InlineButton, type Notifier } from './permissions.js';
@@ -228,7 +228,7 @@ export function createBot(deps: BotDeps): { bot: Telegraf; notifier: Notifier } 
     const s = resolveTarget(ctx, name);
     const lines = await tmux.capturePane(sessions.target(s.name), 200);
     const tail = lines.slice(-n).join('\n').replace(/\n+$/, '') || '(empty)';
-    for (const chunk of formatOutput(s.name, tail)) await html(ctx, chunk);
+    for (const chunk of formatPre(s.name, tail)) await html(ctx, chunk);
   });
 
   bot.command('stop', async (ctx) => {

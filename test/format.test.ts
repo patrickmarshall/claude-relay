@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { chunkLines, escapeHtml, formatOutput, sanitizeFilename, stripAnsi, summarizeToolInput } from '../src/format.js';
+import { chunkLines, escapeHtml, formatOutput, formatPre, sanitizeFilename, stripAnsi, summarizeToolInput } from '../src/format.js';
 
 describe('format', () => {
   it('strips ansi', () => {
@@ -16,9 +16,9 @@ describe('format', () => {
     const long = chunkLines('y'.repeat(2500), 1000);
     expect(long).toHaveLength(3);
   });
-  it('formats output with prefix and pre', () => {
-    const [m] = formatOutput('app', 'a < b');
-    expect(m).toBe('<b>[app]</b>\n<pre>a &lt; b</pre>');
+  it('formats output as plain text and tail as pre', () => {
+    expect(formatOutput('app', 'a < b')[0]).toBe('<b>[app]</b>\na &lt; b');
+    expect(formatPre('app', 'a < b')[0]).toBe('<b>[app]</b>\n<pre>a &lt; b</pre>');
   });
   it('summarises tool input', () => {
     expect(summarizeToolInput('Bash', { command: 'git   push\norigin' })).toBe('git push origin');

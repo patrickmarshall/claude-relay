@@ -54,6 +54,10 @@ describe('cleanTranscript', () => {
   it('removes noise and collapses blanks', () => {
     expect(cleanTranscript(['a', '', '', '✻ Brewed for 1s', '', 'b', '  ⎿  Tip: x', ''])).toBe('a\n\nb');
   });
+  it('drops box drawing and flattens table rows', () => {
+    const lines = ['  ┌──────────┬──────────┐', '  │ Image    │ image, imageURL │', '  ├──────────┼──────────┤', '  │ Sizing   │ Fixed width │', '  └──────────┴──────────┘'];
+    expect(cleanTranscript(lines)).toBe('Image | image, imageURL\nSizing | Fixed width');
+  });
 });
 
 describe('newLinesSince', () => {

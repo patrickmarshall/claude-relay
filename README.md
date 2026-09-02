@@ -78,7 +78,10 @@ scripts/install-launchd.sh
 | `/rules`, `/rules clear` | show `permissions.allow/deny` from the company settings.json plus live auto-allow rules. |
 | `/reload` | re-read `repos` and `autoAllow` from config. Token and allowlist are never reloaded. |
 
-Output from every session is delivered, prefixed `[name]`, as `<pre>` blocks ≤ 4000 chars.
+Output from every session is delivered, prefixed `[name]`, as normal wrapped text (≤ 4000 chars per message);
+box-drawing lines are dropped and table rows flattened. `/tail` is the only monospace view. Relay-launched sessions
+get an appended system prompt telling Claude the reader is on a phone via Telegram (no tables, short lines), so a
+session created before that change needs `/restart <name>` to pick it up.
 The relay posts `🟢 relay up` on boot and `🔴 relay stopping` on SIGTERM; tmux sessions survive both.
 
 ## How permissions work

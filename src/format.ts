@@ -36,8 +36,13 @@ export function chunkLines(text: string, max = TG_CHUNK): string[] {
   return chunks;
 }
 
-/** `[name]` + <pre> block(s), ready for parse_mode=HTML. */
+/** `[name]` + normal wrapped text, ready for parse_mode=HTML. Readable on a phone; no monospace alignment. */
 export function formatOutput(session: string, text: string): string[] {
+  return chunkLines(escapeHtml(text)).map((c) => `<b>[${escapeHtml(session)}]</b>\n${c}`);
+}
+
+/** `[name]` + <pre> block(s) for raw pane dumps (/tail). */
+export function formatPre(session: string, text: string): string[] {
   return chunkLines(escapeHtml(text)).map((c) => `<b>[${escapeHtml(session)}]</b>\n<pre>${c}</pre>`);
 }
 
