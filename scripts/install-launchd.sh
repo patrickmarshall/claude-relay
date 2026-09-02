@@ -5,7 +5,10 @@ set -euo pipefail
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 LABEL="com.patrickmarshall.claude-relay"
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
-NODE="${NODE_BIN:-$(command -v node)}"
+NODE="${NODE_BIN:-}"
+if [ -z "$NODE" ]; then
+  if [ -x /opt/homebrew/bin/node ]; then NODE=/opt/homebrew/bin/node; else NODE="$(command -v node)"; fi
+fi
 TMUX="$(command -v tmux)"
 CLAUDE="$(command -v claude || true)"
 
